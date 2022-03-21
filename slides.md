@@ -5,7 +5,7 @@ theme: default
 # like them? see https://unsplash.com/collections/94734566/slidev
 background: https://source.unsplash.com/collection/94734566/1920x1080
 # apply any windi css classes to the current slide
-class: 'text-center'
+class: "text-center"
 # https://sli.dev/custom/highlighters.html
 highlighter: shiki
 # show line numbers in code blocks
@@ -21,9 +21,7 @@ drawings:
   persist: false
 ---
 
-# Welcome to Slidev
-
-Presentation slides for developers
+# 技术分享-@vue/runtime-core
 
 <div class="pt-12">
   <span @click="$slidev.nav.next" class="px-2 py-1 rounded cursor-pointer" hover="bg-white bg-opacity-10">
@@ -47,22 +45,53 @@ The last comment block of each slide will be treated as slide notes. It will be 
 
 ---
 
-# What is Slidev?
+# Vue3 项目拆分
 
-Slidev is a slides maker and presenter designed for developers, consist of the following features
+<div class='flex justify-center'>
+  <div class='flex flex-col space-y-3 justify-center w-120'>
+   <h3>编译</h3>
+   <h4>@vue/complier-sfc</h4>
+   <h6>处理单文件组件</h6>
+   <h4>@vue/complier-dom</h4>
+   <h6>底层依赖@vue/compiler-core用于将浏览器平台的template编译成render函数</h6>
+   <h4>@vue/complier-core</h4>
+   <h6>编译核心逻辑</h6>
+  </div>
+  <div class='flex-col flex space-y-3 justify-center w-90'>
+   <h3>运行时</h3>
+   <h4>@vue/runtime-dom</h4>
+   <h6>依赖@vue/runtime-core实现浏览器平台下的渲染</h6>
+   <h4>@vue/runtime-core</h4>
+   <h6>核心运行时逻辑</h6>
+   <h4>@vue/reactivity</h4>
+   <h6>实现了数据响应式</h6>
+  </div>
+</div>
+---
 
-- 📝 **Text-based** - focus on the content with Markdown, and then style them later
-- 🎨 **Themable** - theme can be shared and used with npm packages
-- 🧑‍💻 **Developer Friendly** - code highlighting, live coding with autocompletion
-- 🤹 **Interactive** - embedding Vue components to enhance your expressions
-- 🎥 **Recording** - built-in recording and camera view
-- 📤 **Portable** - export into PDF, PNGs, or even a hostable SPA
-- 🛠 **Hackable** - anything possible on a webpage
+# @vue/runtime-core
+
+实现了一个**renderer**（渲染器），将虚拟 Dom 渲染为特定平台上的真实元素
 
 <br>
 <br>
 
-Read more about [Why Slidev?](https://sli.dev/guide/why)
+**通过将渲染器设计为可配置的“通用”渲染器 我们可以实现渲染到任意目标平台上**
+<br>
+<br>
+
+**日常使用的目标平台是浏览器，所以 runtime-core 包需要与 runtime-dom 配合**
+<br>
+<br>
+
+**runtime-core 提供抽象能力与挂载/更新逻辑**
+<br>
+<br>
+
+**runtime-dom 提供真实操作 DOM 的接口**
+
+<br>
+<br>
 
 <!--
 You can have `style` tag in markdown to override the style for the current page.
@@ -83,48 +112,52 @@ h1 {
 
 ---
 
-# Navigation
+### 实现一个最简单的渲染器组件
 
-Hover on the bottom-left corner to see the navigation's controls panel, [learn more](https://sli.dev/guide/navigation.html)
+```vue {all|6|8|12-15|all}
+<script setup lang="ts">
+import { ref, effect } from "vue";
+const app = ref(null);
+const count = ref(0);
+const renderer = (domString, container) => { //渲染器
+  if (container.value) {
+    container.value.innerHTML = domString; //DOM API 由runtime-dom提供
+  }
+};
+const countAdd = () => count.value++;
 
-### Keyboard Shortcuts
+effect(() => {
+  renderer(`<h1>count: ${count.value}</h1>`, app);
+});
+</script>
+<template>
+  <div ref="app"></div>
+  <div @click="countAdd">Add</div>
+</template>
+```
 
-|     |     |
-| --- | --- |
-| <kbd>right</kbd> / <kbd>space</kbd>| next animation or slide |
-| <kbd>left</kbd>  / <kbd>shift</kbd><kbd>space</kbd> | previous animation or slide |
-| <kbd>up</kbd> | previous slide |
-| <kbd>down</kbd> | next slide |
-
-<!-- https://sli.dev/guide/animations.html#click-animations -->
-<img
-  v-click
-  class="absolute -bottom-9 -left-7 w-80 opacity-50"
-  src="https://sli.dev/assets/arrow-bottom-left.svg"
-/>
-<p v-after class="absolute bottom-23 left-45 opacity-30 transform -rotate-10">Here!</p>
-
+<Renderer />
+<v-click>
+<p>利用响应系统的能力，自动调用渲染器完成页面的渲染和更新</p>
+</v-click>
 ---
-layout: image-right
-image: https://source.unsplash.com/collection/94734566/1920x1080
----
 
-# Code
+# 
 
 Use code snippets and get the highlighting directly![^1]
 
 ```ts {all|2|1-6|9|all}
 interface User {
-  id: number
-  firstName: string
-  lastName: string
-  role: string
+  id: number;
+  firstName: string;
+  lastName: string;
+  role: string;
 }
 
 function updateUser(id: number, update: User) {
-  const user = getUser(id)
-  const newUser = {...user, ...update}  
-  saveUser(id, newUser)
+  const user = getUser(id);
+  const newUser = { ...user, ...update };
+  saveUser(id, newUser);
 }
 ```
 
@@ -176,10 +209,9 @@ Check out [the guides](https://sli.dev/builtin/components.html) for more.
 </div>
 </div>
 
+---
 
----
-class: px-20
----
+## class: px-20
 
 # Themes
 
@@ -209,20 +241,15 @@ Read more about [How to use a theme](https://sli.dev/themes/use.html) and
 check out the [Awesome Themes Gallery](https://sli.dev/themes/gallery.html).
 
 ---
-preload: false
----
+
+## preload: false
 
 # Animations
 
 Animations are powered by [@vueuse/motion](https://motion.vueuse.org/).
 
 ```html
-<div
-  v-motion
-  :initial="{ x: -80 }"
-  :enter="{ x: 0 }">
-  Slidev
-</div>
+<div v-motion :initial="{ x: -80 }" :enter="{ x: 0 }">Slidev</div>
 ```
 
 <div class="w-60 relative mt-6">
@@ -295,6 +322,7 @@ LaTeX is supported out-of-box powered by [KaTeX](https://katex.org/).
 Inline $\sqrt{3x-1}+(1+x)^2$
 
 Block
+
 $$
 \begin{array}{c}
 
@@ -372,10 +400,11 @@ database "MySql" {
 
 [Learn More](https://sli.dev/guide/syntax.html#diagrams)
 
-
 ---
+
 layout: center
 class: text-center
+
 ---
 
 # Learn More
