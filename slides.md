@@ -114,12 +114,13 @@ h1 {
 
 ### 实现一个最简单的渲染器组件
 
-```vue {all|6|8|12-15|all}
+```vue {all|5|7|12-14|all}
 <script setup lang="ts">
 import { ref, effect } from "vue";
 const app = ref(null);
 const count = ref(0);
-const renderer = (domString, container) => { //渲染器
+const renderer = (domString, container) => {
+  //渲染器
   if (container.value) {
     container.value.innerHTML = domString; //DOM API 由runtime-dom提供
   }
@@ -142,203 +143,267 @@ effect(() => {
 </v-click>
 ---
 
-# 
+# VNode
 
-Use code snippets and get the highlighting directly![^1]
-
-```ts {all|2|1-6|9|all}
-interface User {
-  id: number;
-  firstName: string;
-  lastName: string;
-  role: string;
-}
-
-function updateUser(id: number, update: User) {
-  const user = getUser(id);
-  const newUser = { ...user, ...update };
-  saveUser(id, newUser);
+```ts
+export function createVnode(type, props?, children?) {
+  const vnode = {
+    type,
+    props,
+    children,
+  };
+  return vnode;
 }
 ```
 
-<arrow v-click="3" x1="400" y1="420" x2="230" y2="330" color="#564" width="3" arrowSize="1" />
-
-[^1]: [Learn More](https://sli.dev/guide/syntax.html#line-highlighting)
-
-<style>
-.footnotes-sep {
-  @apply mt-20 opacity-10;
-}
-.footnotes {
-  @apply text-sm opacity-75;
-}
-.footnote-backref {
-  display: none;
-}
-</style>
+```ts
+// Element VNode (tagName: string, props: Object, children:string | Array)
+createVnode("div", { id: "app" }, "Element Example");
+// Component VNode (Component, props: Object, slots: Object)
+// Component with setup() and render()
+createVnode(
+  Foo,
+  {
+    onChangeChange(a, b) {
+      console.log("onChangeChange", a, b);
+    },
+  },
+  {
+    header: ({ age }) => h("p", {}, "123" + age),
+  }
+);
+```
 
 ---
 
-# Components
+# 主流程
+
+<div class='flex justify-center'>
+
+```mermaid {theme: 'neutral', scale: 0.6}
+graph TD
+B[render] --> C{patch}
+C -->|component| E[processComponent]
+E ---> |mount| I[mountComponent]
+E ---> |update| H[updateComponent]
+I ---> |初始化component| M[setupComponent]
+I ---> |setup| L[setupRenderEffect]
+H ---> |复用setup| L[setupRenderEffect]
+L ---> |update| C
+D ---> |mount| F[mountElement]
+F ---> |ArrayChildren| S[mountChildren]
+F ---> |TextChildren| Z[hostSetElementText]
+S ---> |mPatch each| C
+G[patchElement] ---> K[patchProps]
+D ---> |update| G[patchElement] ---> J[patchChilren] ---> |diff算法 -> uPatch each| C
+C -->|element| D[processElement]
+
+```
+
+</div>
+
+---
+
+# ShapeFlag
+
+将 vnode 分类
 
 <div grid="~ cols-2 gap-4">
+
 <div>
 
-You can use Vue components directly inside your slides.
-
-We have provided a few built-in components like `<Tweet/>` and `<Youtube/>` that you can use directly. And adding your custom components is also super easy.
-
-```html
-<Counter :count="10" />
-```
-
-<!-- ./components/Counter.vue -->
-<Counter :count="10" m="t-4" />
-
-Check out [the guides](https://sli.dev/builtin/components.html) for more.
-
-</div>
-<div>
-
-```html
-<Tweet id="1390115482657726468" />
-```
-
-<Tweet id="1390115482657726468" scale="0.65" />
-
-</div>
-</div>
-
----
-
-## class: px-20
-
-# Themes
-
-Slidev comes with powerful theming support. Themes can provide styles, layouts, components, or even configurations for tools. Switching between themes by just **one edit** in your frontmatter:
-
-<div grid="~ cols-2 gap-2" m="-t-2">
-
-```yaml
----
-theme: default
----
-```
-
-```yaml
----
-theme: seriph
----
-```
-
-<img border="rounded" src="https://github.com/slidevjs/themes/blob/main/screenshots/theme-default/01.png?raw=true">
-
-<img border="rounded" src="https://github.com/slidevjs/themes/blob/main/screenshots/theme-seriph/01.png?raw=true">
-
-</div>
-
-Read more about [How to use a theme](https://sli.dev/themes/use.html) and
-check out the [Awesome Themes Gallery](https://sli.dev/themes/gallery.html).
-
----
-
-## preload: false
-
-# Animations
-
-Animations are powered by [@vueuse/motion](https://motion.vueuse.org/).
-
-```html
-<div v-motion :initial="{ x: -80 }" :enter="{ x: 0 }">Slidev</div>
-```
-
-<div class="w-60 relative mt-6">
-  <div class="relative w-40 h-40">
-    <img
-      v-motion
-      :initial="{ x: 800, y: -100, scale: 1.5, rotate: -50 }"
-      :enter="final"
-      class="absolute top-0 left-0 right-0 bottom-0"
-      src="https://sli.dev/logo-square.png"
-    />
-    <img
-      v-motion
-      :initial="{ y: 500, x: -100, scale: 2 }"
-      :enter="final"
-      class="absolute top-0 left-0 right-0 bottom-0"
-      src="https://sli.dev/logo-circle.png"
-    />
-    <img
-      v-motion
-      :initial="{ x: 600, y: 400, scale: 2, rotate: 100 }"
-      :enter="final"
-      class="absolute top-0 left-0 right-0 bottom-0"
-      src="https://sli.dev/logo-triangle.png"
-    />
-  </div>
-
-  <div
-    class="text-5xl absolute top-14 left-40 text-[#2B90B6] -z-1"
-    v-motion
-    :initial="{ x: -80, opacity: 0}"
-    :enter="{ x: 0, opacity: 1, transition: { delay: 2000, duration: 1000 } }">
-    Slidev
-  </div>
-</div>
-
-<!-- vue script setup scripts can be directly used in markdown, and will only affects current page -->
-<script setup lang="ts">
-const final = {
-  x: 0,
-  y: 0,
-  rotate: 0,
-  scale: 1,
-  transition: {
-    type: 'spring',
-    damping: 10,
-    stiffness: 20,
-    mass: 2
+```ts
+// Shared/ShapeFlag.ts
+export const enum ShapeFlags {
+  ELEMENT = 1, // 0001
+  STATEFUL_COMPONENT = 1 << 1, // 0010
+  TEXT_CHILDREN = 1 << 2, // 0100
+  ARRAY_CHILDREN = 1 << 3, // 1000
+  SLOT_CHILDREN = 1 << 4, // 10000
+}
+// Inside createVnode
+function getShapeFlag(type) {
+  return typeof type === "string"
+    ? ShapeFlags.ELEMENT
+    : ShapeFlags.STATEFUL_COMPONENT;
+}
+if (typeof children === "string") {
+  vnode.ShapeFlag |= ShapeFlags.TEXT_CHILDREN;
+} else if (Array.isArray(children)) {
+  vnode.ShapeFlag |= ShapeFlags.ARRAY_CHILDREN;
+}
+if (vnode.ShapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+  if (typeof children === "object") {
+    vnode.ShapeFlag |= ShapeFlags.SLOT_CHILDREN;
   }
 }
-</script>
+```
 
-<div
-  v-motion
-  :initial="{ x:35, y: 40, opacity: 0}"
-  :enter="{ y: 0, opacity: 1, transition: { delay: 3500 } }">
+</div>
 
-[Learn More](https://sli.dev/guide/animations.html#motion)
+<div>
+<p>
+位运算的｜操作可用于赋值
+</p>
+<p>
+00010 | ShapeFlag.SLOT_CHILDREN => 10010
+</p>
+<br/>
+<br/>
+<p>
+位运算的&操作可用于查找
+</p>
+<p>
+00010 & ShapeFlag.SLOT_CHILDREN => 0
+<br/>
+10010 & ShapeFlag.SLOT_CHILDREN => 1
+</p>
+<br/>
+<br/>
+
+```ts
+if (vnode.ShapeFlag & ShapeFlags.SLOT_CHILDREN) {
+  normalizeObjectSlots(children, instance.slots);
+}
+```
+
+</div>
 
 </div>
 
 ---
 
-# LaTeX
+# Mount Element Vnode
 
-LaTeX is supported out-of-box powered by [KaTeX](https://katex.org/).
+<div grid='~ cols-2 gap-4'>
+<div>
 
-<br>
+```ts
+processElement(null, n2, container); // n1为空，执行挂载逻辑
 
-Inline $\sqrt{3x-1}+(1+x)^2$
+function mountElement(vnode, container, parentComponent, anchor) {
+  // 创建新元素并且挂载在vnode.el上
+  // document.createElement(type);
+  const el = (vnode.el = hostCreateElement(vnode.type));
+  const { children, ShapeFlag } = vnode;
+  if (ShapeFlag & ShapeFlags.TEXT_CHILDREN) {
+    // el.textContent = text;
+    hostSetElementText(el, children);
+  }
+  if (ShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+    // 把Children中的每个VNode再次丢进patch中
+    mountChildren(children, el, parentComponent, anchor);
+  }
+  const { props } = vnode;
+  for (const key in props) {
+    const val = props[key];
+    hostPatchProp(el, key, null, val);
+  }
+  // container.insertBefore(el, anchor || null);
+  hostInsert(el, container, anchor);
+}
+```
 
-Block
+</div>
+<div>
 
-$$
-\begin{array}{c}
+```ts
+function patchProp(el, key, preVal, nextVal) {
+  if (isOn(key)) {
+    const invokers = el._vei || (el._vei = {});
+    const existingInvoker = invokers[key];
+    if (nextVal && existingInvoker) {
+      existingInvoker.value = nextVal;
+    } else {
+      const eventName = key.slice(2).toLowerCase();
+      if (nextVal) {
+        const invoker = (invokers[key] = nextVal);
+        el.addEventListener(eventName, invoker);
+      } else {
+        el.removeEventListener(eventName, existingInvoker);
+        invokers[key] = undefined;
+      }
+    }
+  } else {
+    if (nextVal === null || nextVal === "") {
+      el.removeAttribute(key);
+    } else {
+      el.setAttribute(key, nextVal);
+    }
+  }
+}
+```
 
-\nabla \times \vec{\mathbf{B}} -\, \frac1c\, \frac{\partial\vec{\mathbf{E}}}{\partial t} &
-= \frac{4\pi}{c}\vec{\mathbf{j}}    \nabla \cdot \vec{\mathbf{E}} & = 4 \pi \rho \\
+</div>
+</div>
 
-\nabla \times \vec{\mathbf{E}}\, +\, \frac1c\, \frac{\partial\vec{\mathbf{B}}}{\partial t} & = \vec{\mathbf{0}} \\
+---
 
-\nabla \cdot \vec{\mathbf{B}} & = 0
+# Update Element Vnode
 
-\end{array}
-$$
+<div grid='~ cols-2 gap-4'>
+<div>
 
-<br>
+```ts
+import { EMPTY_OBJ } from "../shared";
+processElement(n1, n2, container); // n1为空，执行挂载逻辑
+function patchElement(n1, n2, container, parentComponent, anchor) {
+  const oldProps = n1.props || EMPTY_OBJ;
+  const newProps = n2.props || EMPTY_OBJ;
+  const el = (n2.el = n1.el); //n2 新节点 没mount 无el
+  patchChildren(n1, n2, el, parentComponent, anchor);
+  patchProps(el, oldProps, newProps);
+}
+function patchProps(el, oldProps, newProps) {
+  if (oldProps !== newProps) {
+    for (const key in newProps) {
+      const prevProp = oldProps[key];
+      const nextProp = newProps[key];
+      if (prevProp !== nextProp) {
+        hostPatchProp(el, key, prevProp, nextProp);
+      }
+    }
+    if (oldProps !== EMPTY_OBJ) {
+      for (const key in oldProps) {
+        if (!(key in newProps)) {
+          //老的有 新的没有 卸载
+          hostPatchProp(el, key, oldProps[key], null);
+        }
+      }
+    }
+  }
+}
+```
 
-[Learn more](https://sli.dev/guide/syntax#latex)
+</div>
+<div>
+
+```ts
+function patchChildren(n1, n2, container, parentComponent, anchor) {
+  const prevShapeFlag = n1.ShapeFlag;
+  const shapeFlag = n2.ShapeFlag;
+  const c2 = n2.children;
+  const c1 = n1.children;
+  if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+    if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      unmountChildren(n1.children);
+    }
+    if (c1 !== c2) {
+      hostSetElementText(container, c2);
+    }
+  } else {
+    if (prevShapeFlag & ShapeFlags.TEXT_CHILDREN) {
+      hostSetElementText(container, "");
+      mountChildren(c2, container, parentComponent, anchor);
+    } else {
+      patchKeyedChildren(c1, c2, container, parentComponent, anchor);
+    }
+  }
+}
+```
+
+</div>
+</div>
 
 ---
 
@@ -354,7 +419,7 @@ sequenceDiagram
     Note over Alice,John: A typical interaction
 ```
 
-```mermaid {theme: 'neutral', scale: 0.8}
+```mermaid {theme: 'neutral', scale: 0.5}
 graph TD
 B[Text] --> C{Decision}
 C -->|One| D[Result 1]
