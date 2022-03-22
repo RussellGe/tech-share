@@ -114,20 +114,20 @@ h1 {
 
 ### 实现一个最简单的渲染器组件
 
-```vue {all|5|7|12-14|all}
+```vue {all|5|7-8|13-15|all}
 <script setup lang="ts">
 import { ref, effect } from "vue";
 const app = ref(null);
 const count = ref(0);
 const renderer = (domString, container) => {
-  //渲染器
   if (container.value) {
-    container.value.innerHTML = domString; //DOM API 由runtime-dom提供
+    //配合@vue/runtime-dom调用浏览器api
+    hostSetInner(container.value, domString);
   }
 };
 const countAdd = () => count.value++;
-
-effect(() => {
+const hostSetInner = (el, content) => (el.innerHTML = content);
+effect(() => { // 配合@vue/reactivity响应式更新数据
   renderer(`<h1>count: ${count.value}</h1>`, app);
 });
 </script>
@@ -272,22 +272,21 @@ if (vnode.ShapeFlag & ShapeFlags.SLOT_CHILDREN) {
 </div>
 
 ---
+clicks: 8
+---
 
 # Mount Element Vnode
 
 <div grid='~ cols-2 gap-4'>
 <div>
 
-```ts
+```ts{all|4|6|7|9|11|16|19|all}
 processElement(null, n2, container); // n1为空，执行挂载逻辑
 
 function mountElement(vnode, container, parentComponent, anchor) {
-  // 创建新元素并且挂载在vnode.el上
-  // document.createElement(type);
   const el = (vnode.el = hostCreateElement(vnode.type));
   const { children, ShapeFlag } = vnode;
   if (ShapeFlag & ShapeFlags.TEXT_CHILDREN) {
-    // el.textContent = text;
     hostSetElementText(el, children);
   }
   if (ShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
@@ -306,8 +305,40 @@ function mountElement(vnode, container, parentComponent, anchor) {
 
 </div>
 <div>
+<div v-click="1">
+<div>创建新元素并且挂载在vnode.el上</div>
+<br/>
+<div>hostCreateElement:document.createElement(type)</div>
+</div>
+<br/>
+<br/>
+<div v-click="2">如果Children是文字</div>
+<br/>
+<div v-click="3">el.textContent = children</div>
+<br/>
+<br/>
+<div v-click="4">如果Children是Array</div>
+<br/>
+<div v-click="5">将每个Child丢进patch中挂载</div>
+<br/>
+<br/>
+<div v-click="6">处理props中的每个prop</div>
+<br/>
+<br/>
+<div v-click="7">将元素挂载到container上</div>
+</div>
+</div>
 
-```ts
+---
+clicks: 8
+---
+
+# PatchProp
+
+<div grid='~ cols-2 gap-4'>
+<div>
+
+```ts{all|2|3-4|5-6|7-14|17|18-19|20-21|all}
 function patchProp(el, key, preVal, nextVal) {
   if (isOn(key)) {
     const invokers = el._vei || (el._vei = {});
@@ -335,8 +366,49 @@ function patchProp(el, key, preVal, nextVal) {
 ```
 
 </div>
+<div>
+<div v-click="1">
+如果这个props代表事件
+
+```ts
+export const isOn = (key) => /^on[A-Z]/.test(key);
+```
+
+</div>
+<br/>
+<div v-click="2">
+将_vei对象绑定到实例上，并取出对应的Invoker
+</div>
+<br/>
+<div v-click="3">
+如果这个事件已经储存过，并且有新的值传入，则直接更新事件
+</div>
+<br/>
+<div v-click="4">
+否则，有新的值传入则储存这个事件并添加绑定，没有则清空_vei中这个事件的值并解绑
+</div>
+<br/>
+<br/>
+<div v-click="5">
+如果这个prop代表属性
+</div>
+<br/>
+<br/>
+<div v-click="6">
+没有则清空属性
+</div>
+<br/>
+<br/>
+<div v-click="7">
+有值则重新赋值
 </div>
 
+</div>
+</div>
+
+
+---
+clicks: 7
 ---
 
 # Update Element Vnode
@@ -344,9 +416,9 @@ function patchProp(el, key, preVal, nextVal) {
 <div grid='~ cols-2 gap-4'>
 <div>
 
-```ts
+```ts{all|1|2|6|11|15-16|21-22|all}
 import { EMPTY_OBJ } from "../shared";
-processElement(n1, n2, container); // n1为空，执行挂载逻辑
+processElement(n1, n2, container); //n1不为空，执行更新逻辑
 function patchElement(n1, n2, container, parentComponent, anchor) {
   const oldProps = n1.props || EMPTY_OBJ;
   const newProps = n2.props || EMPTY_OBJ;
@@ -366,7 +438,6 @@ function patchProps(el, oldProps, newProps) {
     if (oldProps !== EMPTY_OBJ) {
       for (const key in oldProps) {
         if (!(key in newProps)) {
-          //老的有 新的没有 卸载
           hostPatchProp(el, key, oldProps[key], null);
         }
       }
@@ -378,7 +449,48 @@ function patchProps(el, oldProps, newProps) {
 </div>
 <div>
 
-```ts
+<div v-click="1">
+引入只读空对象
+</div>
+<br/>
+<br/>
+<div v-click="2">
+n1不为空，执行更新逻辑
+</div>
+<br/>
+<br/>
+<div v-click="3">
+n2是没有mount过的新节点，所以没有el，需先传递给n2
+</div>
+<br/>
+<br/>
+<div v-click="4">
+如果新旧props不同时为空对象
+</div>
+<br/>
+<br/>
+<div v-click="5">
+找出新props中值与旧props不同的部分，更新
+</div>
+<br/>
+<br/>
+<div v-click="6">
+删除新props中不存在的prop
+</div>
+
+</div>
+</div>
+
+---
+clicks: 5
+---
+
+# Update Element Vnode
+
+<div grid='~ cols-2 gap-4'>
+<div>
+
+```ts{all|6-12|10-12|14-16|17-18|all}
 function patchChildren(n1, n2, container, parentComponent, anchor) {
   const prevShapeFlag = n1.ShapeFlag;
   const shapeFlag = n2.ShapeFlag;
@@ -403,75 +515,51 @@ function patchChildren(n1, n2, container, parentComponent, anchor) {
 ```
 
 </div>
+<div>
+<div>
+一共四种情况
+</div>
+<br/>
+<br/>
+<div v-click="1">
+新的是TEXT旧的是ARRAY --> 删除旧节点并更新TEXT
+</div>
+<br/>
+<br/>
+<div v-click="2">
+新旧Children都是TEXT --> 更新TEXT 
+</div>
+<br/>
+<br/>
+<div v-click="3">
+新的是ARRAY旧的是TEXT --> 删除TEXT并将新的children重新mount
+</div>
+<br/>
+<br/>
+<div v-click="4">
+新旧都是ARRAY --> diff算法计算出需要重新计算的节点
+</div>
+<br/>
+<br/>
+<div v-click="6">
+删除新props中不存在的prop
+</div>
+
+</div>
 </div>
 
 ---
 
-# Diagrams
-
-You can create diagrams / graphs from textual descriptions, directly in your Markdown.
+# diff 算法
 
 <div class="grid grid-cols-3 gap-10 pt-4 -mb-6">
 
-```mermaid {scale: 0.5}
-sequenceDiagram
-    Alice->John: Hello John, how are you?
-    Note over Alice,John: A typical interaction
-```
-
-```mermaid {theme: 'neutral', scale: 0.5}
-graph TD
-B[Text] --> C{Decision}
-C -->|One| D[Result 1]
-C -->|Two| E[Result 2]
-```
-
-```plantuml {scale: 0.7}
-@startuml
-
-package "Some Group" {
-  HTTP - [First Component]
-  [Another Component]
-}
-
-node "Other Groups" {
-  FTP - [Second Component]
-  [First Component] --> FTP
-}
-
-cloud {
-  [Example 1]
-}
-
-
-database "MySql" {
-  folder "This is my folder" {
-    [Folder 3]
-  }
-  frame "Foo" {
-    [Frame 4]
-  }
-}
-
-
-[Another Component] --> [Example 1]
-[Example 1] --> [Folder 3]
-[Folder 3] --> [Frame 4]
-
-@enduml
-```
-
 </div>
 
-[Learn More](https://sli.dev/guide/syntax.html#diagrams)
-
 ---
 
-layout: center
-class: text-center
+# MountComponent
 
----
+<div class="grid grid-cols-3 gap-10 pt-4 -mb-6">
 
-# Learn More
-
-[Documentations](https://sli.dev) · [GitHub](https://github.com/slidevjs/slidev) · [Showcases](https://sli.dev/showcases.html)
+</div>
