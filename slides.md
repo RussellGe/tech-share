@@ -21,7 +21,7 @@ drawings:
   persist: false
 ---
 
-# 技术分享-@vue/runtime-core
+# 技术分享-@vue/runtime-core (ElementVnode)
 
 <div class="pt-12">
   <span @click="$slidev.nav.next" class="px-2 py-1 rounded cursor-pointer" hover="bg-white bg-opacity-10">
@@ -67,6 +67,7 @@ The last comment block of each slide will be treated as slide notes. It will be 
    <h6>实现了数据响应式</h6>
   </div>
 </div>
+
 ---
 
 # @vue/runtime-core
@@ -127,8 +128,7 @@ const renderer = (domString, container) => {
 };
 const countAdd = () => count.value++;
 const hostSetInner = (el, content) => (el.innerHTML = content);
-effect(() => {
-  // 配合@vue/reactivity响应式更新数据
+effect(() => {// 配合@vue/reactivity响应式更新数据
   renderer(`<h1>count: ${count.value}</h1>`, app);
 });
 </script>
@@ -137,7 +137,6 @@ effect(() => {
   <div @click="countAdd">Add</div>
 </template>
 ```
-
 <Renderer />
 <v-click>
 <p>利用响应系统的能力，自动调用渲染器完成页面的渲染和更新</p>
@@ -776,10 +775,11 @@ clicks: 2
 ---
 # Diff 算法
 优化处理逻辑，引入moved与maxIndexSoFar，检测是否出现过移动
-
 <div grid='~ cols-2 gap-4'>
 <div>
 <img src='/diff-res-4.png' />
+<div>newIndexToOldIndexMap --> 用于定位不需要移动的可复用元素,从而找到需要移动的可复用元素</div>
+<br/>
 <ul>
 <li>找到最多不需要进行DOM操作的元素</li>
 <li>patch更新所有可复用元素</li>
@@ -794,8 +794,7 @@ clicks: 2
 ```ts
 let moved = false;
 let maxNewIndexSoFar = 0;
-//刚在的newIndex存在条件分支
-else {
+else { // newIndex存在条件分支
   if (newIndex >= maxNewIndexSoFar) {
     maxNewIndexSoFar = newIndex;
   } else {
@@ -809,8 +808,7 @@ else {
 
 </div>
 <div v-click='2'>
-<h3>newIndexToOldIndexMap --> 用于定位不需要移动的可复用元素,从而找到需要移动的可复用元素</h3>
-<h3>moved:完成了删除和可复用元素patch <br/>not moved：完成了删除和可复用元素patch和移动</h3>
+<h3>moved:完成了删除和可复用元素patch<br/><br/>not moved：完成了删除和可复用元素patch和移动</h3>
 </div>
 </div>
 
@@ -823,38 +821,48 @@ else {
 </style>
 
 ---
-clicks: 2
+clicks: 7
 ---
 # Diff 算法
 优化处理逻辑，引入moved与maxIndexSoFar，检测是否出现过移动
 
 <div grid='~ cols-2 gap-4'>
 <div>
-<img src='/diff-res-4.png' />
+<img src='/diff-res-6.png' />
+<br/>
+<div v-click='1'>获得最长递增子串，完成了找到最多不需要进行DOM操作的元素</div>
+<br/>
+<ul v-click='2'>
+<li>moved: 剩下移动与新增节点</li>
+<li>not moved: 剩下新增节点</li>
+</ul>
 </div>
-<div>
-<div v-click='1'>
 
-```ts
-let moved = false;
-let maxNewIndexSoFar = 0;
-//刚在的newIndex存在条件分支
-else {
-  if (newIndex >= maxNewIndexSoFar) {
-    maxNewIndexSoFar = newIndex;
-  } else {
-    moved = true;
+<div>
+<div>
+
+```ts{all|1-3|8|9-10|11-14|all}
+const increasingNewIndexSequence = moved
+  ? getSequence(newIndexToOldIndexMap)
+  : [];
+let j = increasingNewIndexSequence.length;
+for (let i = toBePatched - 1; i >= 0; i--) {
+  const nextIndex = i + s2;
+  const nextChild = c2[nextIndex];
+  const anchor = nextIndex + 1 < l2 ? c2[nextIndex + 1].el : null;
+  if (newIndexToOldIndexMap[i] === 0) {
+    patch(null, nextChild, container, parentComponent, anchor);
+  } else if (moved) {
+    if (j < 0 || i !== increasingNewIndexSequence[j]) {
+      console.log("移动");
+      hostInsert(nextChild.el, container, anchor);
+    } else {
+      j--;
+    }
   }
-  newIndexToOldIndexMap[newIndex - s2] = i + 1;
-  patch(prevChild, c2[newIndex], container, parentComponent, null);
-  patched++;
 }
 ```
 
-</div>
-<div v-click='2'>
-<h3>newIndexToOldIndexMap --> 用于定位不需要移动的可复用元素,从而找到需要移动的可复用元素</h3>
-<h3>moved为false意味着所有可复用元素都不需要移动，那么他们已经patch完成</h3>
 </div>
 </div>
 
@@ -865,3 +873,140 @@ else {
     width: 90%
   }
 </style>
+
+---
+
+# 特殊type处理
+实现FragmentType与TextNodeType
+
+<div grid='~ cols-2 gap-4'>
+<div>
+
+```ts
+// vnode.ts
+export const Text = Symbol('Text')
+export const Fragment = Symbol('Fragment')
+
+export function createTextVnode(text) {
+  return createVnode(Text, {}, text)
+}
+```
+<div>
+<br/>
+<br/>
+<br/>
+在vnode中定义特殊type
+<br/>
+<br/>
+
+在patch中拿到type
+<br/>
+
+<br/>
+根据特殊的type做特别处理
+<br/>
+<br/>
+
+不为特殊type的在走正常Element / Component流程
+</div>
+</div>
+
+<div>
+<div>
+
+```ts
+// renderer.ts #patch
+function patch(n1, n2, container, parentComponent, anchor) {
+  const { type, ShapeFlag } = n2;
+  // Fragment --> 只渲染所有的children
+  switch (type) {
+    case Fragment:
+      processFragment(n1, n2, container, parentComponent, anchor);
+      break;
+    case Text:
+      processText(n1, n2, container);
+      break;
+    default:
+      if (ShapeFlag & ShapeFlags.ELEMENT) {
+        processElement(n1, n2, container, parentComponent, anchor);
+      }
+      if (ShapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+        processComponent(n1, n2, container, parentComponent, anchor);
+      }
+      break;
+  }
+}
+```
+
+</div>
+</div>
+
+</div>
+
+---
+
+# 特殊type处理
+实现FragmentType与TextNodeType
+
+<div grid='~ cols-2 gap-4'>
+<div>
+
+```ts
+function processFragment(n1, n2, container, parentComponent, anchor) {
+  // Implement
+  mountChildren(n2.children, container, parentComponent, anchor);
+}
+function processText(n1, n2, container) {
+  console.log("处理 Text 节点");
+  if (n1 === null) {
+    // n1 是 null 说明是 init 的阶段
+    // 基于 createText 创建出 text 节点，然后使用 insert 添加到 el 内
+    console.log("初始化 Text 类型的节点");
+    hostInsert((n2.el = hostCreateText(n2.children as string)), container);
+  } else {
+    // 在不一样的时候才需要 update text
+    // 这里抽离出来的接口是 setText
+    // 注意，这里一定要记得把 n1.el 赋值给 n2.el, 不然后续是找不到值的
+    const el = (n2.el = n1.el!);
+    if (n2.children !== n1.children) {
+      console.log("更新 Text 类型的节点");
+      hostSetText(el, n2.children as string);
+    }
+  }
+}
+```
+</div>
+
+<div>
+<div>
+
+```ts
+<template class='FragmentType'>
+  <div>Child 1</div>
+  <div>Child 2</div>
+  <div>Child 3</div>
+</template>
+
+h(Fragment, {class: 'FragmentType'}, [
+  h("div", {}, "Child 1"),
+  h("div", {}, "Child 2"),
+  h("div", {}, "Child 3"),
+])
+
+<div class='TextType'>
+  <div>Child 1</div>
+  TextChild
+  <div>Child 3</div>
+</div>
+
+h("div", {class: 'FragmentType'}, [
+  h("div", {}, "Child 1"),
+  h(Text, {}, "TextChild"),
+  h("div", {}, "Child 3"),
+])
+```
+
+</div>
+</div>
+
+</div>
