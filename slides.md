@@ -127,7 +127,8 @@ const renderer = (domString, container) => {
 };
 const countAdd = () => count.value++;
 const hostSetInner = (el, content) => (el.innerHTML = content);
-effect(() => { // 配合@vue/reactivity响应式更新数据
+effect(() => {
+  // 配合@vue/reactivity响应式更新数据
   renderer(`<h1>count: ${count.value}</h1>`, app);
 });
 </script>
@@ -274,7 +275,6 @@ if (vnode.ShapeFlag & ShapeFlags.SLOT_CHILDREN) {
 ---
 clicks: 8
 ---
-
 # Mount Element Vnode
 
 <div grid='~ cols-2 gap-4'>
@@ -332,7 +332,6 @@ function mountElement(vnode, container, parentComponent, anchor) {
 ---
 clicks: 8
 ---
-
 # PatchProp
 
 <div grid='~ cols-2 gap-4'>
@@ -406,11 +405,9 @@ export const isOn = (key) => /^on[A-Z]/.test(key);
 </div>
 </div>
 
-
 ---
 clicks: 7
 ---
-
 # Update Element Vnode
 
 <div grid='~ cols-2 gap-4'>
@@ -484,7 +481,6 @@ n2是没有mount过的新节点，所以没有el，需先传递给n2
 ---
 clicks: 5
 ---
-
 # Update Element Vnode
 
 <div grid='~ cols-2 gap-4'>
@@ -549,17 +545,323 @@ function patchChildren(n1, n2, container, parentComponent, anchor) {
 </div>
 
 ---
+clicks: 2
+---
+# Diff 算法
 
-# diff 算法
+双端对比筛选相同节点
 
-<div class="grid grid-cols-3 gap-10 pt-4 -mb-6">
+<div grid='~ cols-2 gap-4'>
+<div>
+<img src='diff-pre.png' />
+<br/>
+<br/>
+<br/>
+<div v-click='1'>
+
+```ts
+function patchKeyedChildren(c1, c2, container, parentComponent, anchor) {
+  let i = 0;
+  const l2 = c2.length;
+  let e1 = c1.length - 1;
+  let e2 = l2 - 1;
+  function isSameVnodeType(n1, n2) {
+    return n1.type === n2.type && n1.key === n2.key;
+  }
+```
+
+</div>
+</div>
+<div>
+<div v-click='2'>
+
+```ts
+// 筛选左侧一致元素
+while (i <= e1 && i <= e2) {
+  const n1 = c1[i];
+  const n2 = c2[i];
+  if (isSameVnodeType(n1, n2)) {
+    patch(n1, n2, container, parentComponent, anchor);
+  } else {
+    break;
+  }
+  i++;
+}
+// 筛选右侧一致元素
+while (i <= e1 && i <= e2) {
+  const n1 = c1[e1];
+  const n2 = c2[e2];
+  if (isSameVnodeType(n1, n2)) {
+    patch(n1, n2, container, parentComponent, anchor);
+  } else {
+    break;
+  }
+  e1--;
+  e2--;
+}
+```
+
+</div>
+</div>
 
 </div>
 
 ---
+clicks: 1
+---
+# Diff 算法
 
-# MountComponent
+指针溢出：代表新 children 与老 children 相比只是增加/减少了头部/尾部的元素
 
-<div class="grid grid-cols-3 gap-10 pt-4 -mb-6">
+<div grid='~ cols-2 gap-4'>
+<div>
+<img src='diff-res1.png' />
+</div>
+<div>
+<div v-click='1'>
+
+```ts
+// 新的比老的多 创建
+if (i > e1) {
+  if (i <= e2) {
+    const nextPos = e2 + 1;
+    const anchor = nextPos < l2 ? c2[nextPos].el : null;
+    while (i <= e2) {
+      patch(null, c2[i], container, parentComponent, anchor);
+      i++;
+    }
+  }
+} else if (i > e2) {
+  while (i <= e1) {
+    hostRemove(c1[i].el);
+    i++;
+  }
+```
 
 </div>
+</div>
+
+</div>
+
+---
+clicks: 2
+---
+# Diff 算法
+
+指针未溢出：代表中间有需要处理的 array
+
+<div grid='~ cols-2 gap-4'>
+<div>
+<img src='diff-res2.png' />
+</div>
+<div>
+中间数组需要进行的操作：
+<br/>
+<br/>
+<br/>
+<div v-click='1'>
+<ul>
+<li>找到最多不需要进行DOM操作的元素</li>
+<li>patch更新所有可复用元素</li>
+<li>移动剩下可复用的child</li>
+<li>创建新增添的节点</li>
+<li>删除不存在的节点</li>
+</ul>  
+</div>
+<img v-click='2' src='diff-res-3.png' />
+</div>
+
+</div>
+
+<style>
+  img {
+    width: 90%
+  }
+</style>
+
+---
+clicks: 1
+---
+# Diff 算法
+
+预处理中间数组，得到 newIndexMap
+
+<div grid='~ cols-2 gap-4'>
+<div>
+<img src='diff-res-5.png' />
+</div>
+<div>
+<div v-click='1'>
+
+```ts
+let s1 = i;
+let s2 = i;
+
+let toBePatched = e2 - s2 + 1;
+let patched = 0;
+const keyToNewIndexMap = new Map();
+const newIndexToOldIndexMap = new Array(toBePatched);
+for (let i = 0; i < toBePatched; i++) newIndexToOldIndexMap[i] = 0;
+for (let i = s2; i <= e2; i++) {
+  const nextChild = c2[i];
+  keyToNewIndexMap.set(nextChild.key, i);
+}
+```
+
+</div>
+</div>
+
+</div>
+
+<style>
+  img {
+    width: 90%
+  }
+</style>
+
+---
+clicks: 7
+---
+# Diff 算法
+
+遍历 oldArray，获得 newIndexToOldIndexMap,patch可复用元素并删除不存在的元素
+
+<div grid='~ cols-2 gap-4'>
+<div>
+<img src='diff-res-5.png' />
+</div>
+<div>
+<div v-click='1'>
+
+```ts{all|all|7-8|10-12|17-18|20-22|4-6|all}
+let newIndex;
+for (let i = s1; i <= e1; i++) {
+  const prevChild = c1[i];
+  if (patched >= toBePatched) {
+    hostRemove(prevChild.el);
+  }
+  if (prevChild.key != null) {
+    newIndex = keyToNewIndexMap.get(prevChild.key);
+  } else {
+    for (let j = s2; j <= e2; j++) {
+      if (isSameVnodeType(prevChild, c2[j])) {
+        newIndex = j;
+        break;
+      }
+    }
+  }
+  if (newIndex === undefined) {
+    hostRemove(prevChild.el);
+  } else {
+    newIndexToOldIndexMap[newIndex - s2] = i + 1;
+    patch(prevChild, c2[newIndex], container, parentComponent, null);
+    patched++;
+  }
+}
+```
+
+</div>
+</div>
+
+</div>
+
+<style>
+  img {
+    width: 90%
+  }
+</style>
+
+---
+clicks: 2
+---
+# Diff 算法
+优化处理逻辑，引入moved与maxIndexSoFar，检测是否出现过移动
+
+<div grid='~ cols-2 gap-4'>
+<div>
+<img src='diff-res-4.png' />
+<ul>
+<li>找到最多不需要进行DOM操作的元素</li>
+<li>patch更新所有可复用元素</li>
+<li>移动剩下可复用的child</li>
+<li>创建新增添的节点</li>
+<li>删除不存在的节点</li>
+</ul>  
+</div>
+<div>
+<div v-click='1'>
+
+```ts
+let moved = false;
+let maxNewIndexSoFar = 0;
+//刚在的newIndex存在条件分支
+else {
+  if (newIndex >= maxNewIndexSoFar) {
+    maxNewIndexSoFar = newIndex;
+  } else {
+    moved = true;
+  }
+  newIndexToOldIndexMap[newIndex - s2] = i + 1;
+  patch(prevChild, c2[newIndex], container, parentComponent, null);
+  patched++;
+}
+```
+
+</div>
+<div v-click='2'>
+<h3>newIndexToOldIndexMap --> 用于定位不需要移动的可复用元素,从而找到需要移动的可复用元素</h3>
+<h3>moved:完成了删除和可复用元素patch <br/>not moved：完成了删除和可复用元素patch和移动</h3>
+</div>
+</div>
+
+</div>
+
+<style>
+  img {
+    width: 90%
+  }
+</style>
+
+---
+clicks: 2
+---
+# Diff 算法
+优化处理逻辑，引入moved与maxIndexSoFar，检测是否出现过移动
+
+<div grid='~ cols-2 gap-4'>
+<div>
+<img src='diff-res-4.png' />
+</div>
+<div>
+<div v-click='1'>
+
+```ts
+let moved = false;
+let maxNewIndexSoFar = 0;
+//刚在的newIndex存在条件分支
+else {
+  if (newIndex >= maxNewIndexSoFar) {
+    maxNewIndexSoFar = newIndex;
+  } else {
+    moved = true;
+  }
+  newIndexToOldIndexMap[newIndex - s2] = i + 1;
+  patch(prevChild, c2[newIndex], container, parentComponent, null);
+  patched++;
+}
+```
+
+</div>
+<div v-click='2'>
+<h3>newIndexToOldIndexMap --> 用于定位不需要移动的可复用元素,从而找到需要移动的可复用元素</h3>
+<h3>moved为false意味着所有可复用元素都不需要移动，那么他们已经patch完成</h3>
+</div>
+</div>
+
+</div>
+
+<style>
+  img {
+    width: 90%
+  }
+</style>
