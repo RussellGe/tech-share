@@ -553,7 +553,7 @@ clicks: 2
 
 <div grid='~ cols-2 gap-4'>
 <div>
-<img src='diff-pre.png' />
+<img src='/diff-pre.png' />
 <br/>
 <br/>
 <br/>
@@ -615,7 +615,7 @@ clicks: 1
 
 <div grid='~ cols-2 gap-4'>
 <div>
-<img src='diff-res1.png' />
+<img src='/diff-res1.png' />
 </div>
 <div>
 <div v-click='1'>
@@ -652,7 +652,7 @@ clicks: 2
 
 <div grid='~ cols-2 gap-4'>
 <div>
-<img src='diff-res2.png' />
+<img src='/diff-res2.png' />
 </div>
 <div>
 中间数组需要进行的操作：
@@ -668,7 +668,7 @@ clicks: 2
 <li>删除不存在的节点</li>
 </ul>  
 </div>
-<img v-click='2' src='diff-res-3.png' />
+<img v-click='2' src='/diff-res-3.png' />
 </div>
 
 </div>
@@ -688,7 +688,7 @@ clicks: 1
 
 <div grid='~ cols-2 gap-4'>
 <div>
-<img src='diff-res-5.png' />
+<img src='/diff-res-5.png' />
 </div>
 <div>
 <div v-click='1'>
@@ -728,7 +728,7 @@ clicks: 7
 
 <div grid='~ cols-2 gap-4'>
 <div>
-<img src='diff-res-5.png' />
+<img src='/diff-res-5.png' />
 </div>
 <div>
 <div v-click='1'>
@@ -779,7 +779,7 @@ clicks: 2
 
 <div grid='~ cols-2 gap-4'>
 <div>
-<img src='diff-res-4.png' />
+<img src='/diff-res-4.png' />
 <ul>
 <li>找到最多不需要进行DOM操作的元素</li>
 <li>patch更新所有可复用元素</li>
@@ -830,7 +830,7 @@ clicks: 2
 
 <div grid='~ cols-2 gap-4'>
 <div>
-<img src='diff-res-4.png' />
+<img src='/diff-res-4.png' />
 </div>
 <div>
 <div v-click='1'>
