@@ -128,7 +128,8 @@ const renderer = (domString, container) => {
 };
 const countAdd = () => count.value++;
 const hostSetInner = (el, content) => (el.innerHTML = content);
-effect(() => {// 配合@vue/reactivity响应式更新数据
+effect(() => {
+  // 配合@vue/reactivity响应式更新数据
   renderer(`<h1>count: ${count.value}</h1>`, app);
 });
 </script>
@@ -137,6 +138,7 @@ effect(() => {// 配合@vue/reactivity响应式更新数据
   <div @click="countAdd">Add</div>
 </template>
 ```
+
 <Renderer />
 <v-click>
 <p>利用响应系统的能力，自动调用渲染器完成页面的渲染和更新</p>
@@ -274,6 +276,7 @@ if (vnode.ShapeFlag & ShapeFlags.SLOT_CHILDREN) {
 ---
 clicks: 8
 ---
+
 # Mount Element Vnode
 
 <div grid='~ cols-2 gap-4'>
@@ -329,6 +332,7 @@ function mountElement(vnode, container, parentComponent, anchor) {
 </div>
 
 ---
+
 clicks: 8
 ---
 # PatchProp
@@ -480,6 +484,8 @@ n2是没有mount过的新节点，所以没有el，需先传递给n2
 ---
 clicks: 5
 ---
+
+
 # Update Element Vnode
 
 <div grid='~ cols-2 gap-4'>
@@ -546,6 +552,7 @@ function patchChildren(n1, n2, container, parentComponent, anchor) {
 ---
 clicks: 2
 ---
+
 # Diff 算法
 
 双端对比筛选相同节点
@@ -608,6 +615,7 @@ while (i <= e1 && i <= e2) {
 ---
 clicks: 1
 ---
+
 # Diff 算法
 
 指针溢出：代表新 children 与老 children 相比只是增加/减少了头部/尾部的元素
@@ -645,6 +653,7 @@ if (i > e1) {
 ---
 clicks: 2
 ---
+
 # Diff 算法
 
 指针未溢出：代表中间有需要处理的 array
@@ -681,6 +690,7 @@ clicks: 2
 ---
 clicks: 1
 ---
+
 # Diff 算法
 
 预处理中间数组，得到 newIndexMap
@@ -721,9 +731,10 @@ for (let i = s2; i <= e2; i++) {
 ---
 clicks: 7
 ---
+
 # Diff 算法
 
-遍历 oldArray，获得 newIndexToOldIndexMap,patch可复用元素并删除不存在的元素
+遍历 oldArray，获得 newIndexToOldIndexMap,patch 可复用元素并删除不存在的元素
 
 <div grid='~ cols-2 gap-4'>
 <div>
@@ -773,8 +784,11 @@ for (let i = s1; i <= e1; i++) {
 ---
 clicks: 2
 ---
+
 # Diff 算法
-优化处理逻辑，引入moved与maxIndexSoFar，检测是否出现过移动
+
+优化处理逻辑，引入 moved 与 maxIndexSoFar，检测是否出现过移动
+
 <div grid='~ cols-2 gap-4'>
 <div>
 <img src='/diff-res-4.png' />
@@ -823,8 +837,10 @@ else { // newIndex存在条件分支
 ---
 clicks: 7
 ---
+
 # Diff 算法
-优化处理逻辑，引入moved与maxIndexSoFar，检测是否出现过移动
+
+优化处理逻辑，引入 moved 与 maxIndexSoFar，检测是否出现过移动
 
 <div grid='~ cols-2 gap-4'>
 <div>
@@ -876,21 +892,23 @@ for (let i = toBePatched - 1; i >= 0; i--) {
 
 ---
 
-# 特殊type处理
-实现FragmentType与TextNodeType
+# 特殊 type 处理
+
+实现 FragmentType 与 TextNodeType
 
 <div grid='~ cols-2 gap-4'>
 <div>
 
 ```ts
 // vnode.ts
-export const Text = Symbol('Text')
-export const Fragment = Symbol('Fragment')
+export const Text = Symbol("Text");
+export const Fragment = Symbol("Fragment");
 
 export function createTextVnode(text) {
-  return createVnode(Text, {}, text)
+  return createVnode(Text, {}, text);
 }
 ```
+
 <div>
 <br/>
 <br/>
@@ -899,7 +917,7 @@ export function createTextVnode(text) {
 <br/>
 <br/>
 
-在patch中拿到type
+在 patch 中拿到 type
 <br/>
 
 <br/>
@@ -907,7 +925,8 @@ export function createTextVnode(text) {
 <br/>
 <br/>
 
-不为特殊type的在走正常Element / Component流程
+不为特殊 type 的在走正常 Element / Component 流程
+
 </div>
 </div>
 
@@ -945,8 +964,9 @@ function patch(n1, n2, container, parentComponent, anchor) {
 
 ---
 
-# 特殊type处理
-实现FragmentType与TextNodeType
+# 特殊 type 处理
+
+实现 FragmentType 与 TextNodeType
 
 <div grid='~ cols-2 gap-4'>
 <div>
@@ -975,6 +995,7 @@ function processText(n1, n2, container) {
   }
 }
 ```
+
 </div>
 
 <div>
@@ -1009,4 +1030,82 @@ h("div", {class: 'FragmentType'}, [
 </div>
 </div>
 
+</div>
+
+---
+
+# mountComponent
+
+```ts
+function mountComponent(initialVNode: any, container, parentComponent, anchor) {
+  // 初始化组件实例对象
+  const instance = (initialVNode.component = createComponentInstance(
+    initialVNode,
+    parentComponent
+  ));
+
+  // 初始化组件配置（props 插槽） 初始化组件全局调用属性（例如 $el, $slots, $props） 
+  // 调用setup函数，并将返回值做一层refProxy(为啥template里不用.value)
+  setupComponent(instance);
+
+  // 调用组件的render函数 渲染出真正的dom节点
+  setupRenderEffect(instance, initialVNode, container, anchor);
+}
+```
+
+---
+
+# 补充 effect
+<div grid='~ cols-2 gap-4'>
+<div>
+
+```ts
+export function effect(fn, options: any  = {}) {
+    const scheduler = options.scheduler
+    // fn
+    const _effect = new ReactiveEffect(fn, scheduler);
+    extend(_effect, options)
+    _effect.run();
+
+    const runner: any = _effect.run.bind(_effect)
+    runner.effect = _effect
+    return runner
+}
+export function triggerEffects(dep) {
+    for(const effect of dep) {
+        if(effect.scheduler) {
+            effect.scheduler()
+        } else {
+            effect.run()
+        }
+    }
+}
+```
+</div>
+<div>
+
+```vue
+<script setup lang="ts">
+import { ref, effect } from "vue";
+const count = ref(0);
+const countAdd = () => {
+    for(let i = 0; i < 100; i++) {
+        count.value ++
+    }
+    runner()
+}
+const relatedValue = ref(0)
+const runner = effect(() => {
+    relatedValue.value += count.value
+    console.log(count.value)
+}, {
+    scheduler: () => {
+        console.log(1)
+    }
+})
+</script>
+```
+<Effect />
+
+</div>
 </div>
